@@ -4,11 +4,57 @@ output: html_document
 date: "`r Sys.Date()`"
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=TRUE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
+
+## Lectura del html y transformación a dataframe
+
+# Leer el archivo
+lineas <- readlineas("Frecuencias CORPES - 10000 formas ortográficas.html", 
+                   encoding = "UTF-8")
+
+# Buscar donde empieza la priemra linea
+linea_inicio <- grep("^[^0-9\t\n]+\t[0-9]+\t[0-9]+", lineas)[1]
+
+# Extraer 10000 líneas a partir del inicio
+datos <- lineas[linea_inicio:(linea_inicio + 9999)]
+
+# Separar cada línea por tabulador (\t)
+partes <- strsplit(datos, "\t")
+
+# Extraer las columnas
+formas <- sapply(partes, function(x) x[1])
+frecuencias <- as.numeric(sapply(partes, function(x) x[2]))
+frec_norm <- as.numeric(sapply(partes, function(x) x[3]))
+
+# Crear el dataframe 
+tabla <- data.frame(Forma = formas,
+                    Frecuencia = frecuencias,
+                    Frec.norm = frec_norm,
+                    stringsAsFactors = FALSE)
+
+
+## Apartado 1.2
+
+# Pasar todo a minúsculas
+tabla$min_forma <- tolower(tabla$Forma)
+
+# Contar cuántas formas básicas tienen variantes
+conteo <- table(tolower(tabla$Forma))
+duplicados <- conteo[conteo > 1]
+
+cat("Formas básicas con duplicados no exactos:", length(duplicados), "\n")
+
+# Mostrar primeros 5 ejemplos
+cat("\nPrimeros 5 ejemplos:\n")
+for (i in 1:5) {
+  forma <- names(duplicados)[i]
+  variantes <- unique(tabla$Forma[tolower(tabla$Forma) == forma])
+  cat(i, " '", forma, "' con las varientes: ", paste(variantes, collapse = ", "), "\n", sep = "")
+}
 
 ```
 
