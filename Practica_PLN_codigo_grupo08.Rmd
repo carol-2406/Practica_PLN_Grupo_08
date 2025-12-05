@@ -1,0 +1,141 @@
+---
+title: "Practica_PLN_Grupo08"
+output: html_document
+date: "`r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+
+## Lectura del html y transformación a dataframe
+
+# Leer el archivo
+# Leer el archivo HTML LOCAL con readLines
+lineas <- readLines("Frecuencias CORPES - 10000 formas ortográficas.html",
+                    encoding = "UTF-8",
+                    warn = FALSE)
+
+
+# Buscar donde empieza la primera linea
+linea_inicio <- grep("^[^0-9\t\n]+\t[0-9]+\t[0-9]+", lineas)[1]
+
+# Extraer 10000 líneas a partir del inicio
+datos <- lineas[linea_inicio:(linea_inicio + 9999)]
+
+# Separar cada línea por tabulador (\t)
+partes <- strsplit(datos, "\t")
+
+# Extraer las columnas
+formas <- sapply(partes, function(x) x[1])
+frecuencias <- as.numeric(sapply(partes, function(x) x[2]))
+frec_norm <- as.numeric(sapply(partes, function(x) x[3]))
+
+# Crear el dataframe 
+tabla <- data.frame(Forma = formas,
+                    Frecuencia = frecuencias,
+                    Frec.norm = frec_norm,
+                    stringsAsFactors = FALSE)
+
+
+
+
+
+```
+
+## Ley de Zipf
+
+```{r}
+## APARTADO 1
+# Creamos la columna de rangos
+tabla$rango <- 1:nrow(tabla)
+
+# Gráfico log-log
+plot(log10(tabla$rango),
+     log10(tabla$Frecuencia),
+     pch = 20, cex = 0.5,
+     xlab = "log10(Rango)",
+     ylab = "log10(Frecuencia)",
+     main = "Ley de Zipf: Frecuencia vs Rango (escala log-log)")
+
+# Ajuste lineal para visualizar la tendencia
+modelo <- lm(log10(Frecuencia) ~ log10(rango), data = tabla)
+abline(modelo, col = "red", lwd = 2)
+
+```
+## Apartado 1.1: Repeticiones
+```{r}
+## Apartado 1.1
+# 1.1.1) BUSCAR FORMAS REPETIDAS
+
+duplicadas <- tabla$Forma[duplicated(tabla$Forma)]
+duplicadas
+
+
+# 1.1.2) SI HAY DUPLICADAS, MOSTRAR DETALLES
+
+if (length(duplicadas) > 0) {
+  
+  lista_repetidas <- lapply(duplicadas, function(f) {
+    indices <- which(tabla$Forma == f)
+    data.frame(
+      Forma = f,
+      Linea = indices,
+      Frecuencia = tabla$Frecuencia[indices]
+    )
+  })
+  
+  resultado <- do.call(rbind, lista_repetidas)
+  resultado
+  
+} else {
+  print("No hay formas repetidas en este listado.")}
+
+```
+
+
+
+## Apartado 1.2
+```{r}
+# Pasar todo a minúsculas
+tabla$min_forma <- tolower(tabla$Forma)
+
+# Contar cuántas formas básicas tienen variantes
+conteo <- table(tolower(tabla$Forma))
+duplicados <- conteo[conteo > 1]
+
+cat("Formas básicas con duplicados no exactos:", length(duplicados), "\n")
+
+# Mostrar primeros 5 ejemplos
+cat("\nPrimeros 5 ejemplos:\n")
+for (i in 1:5) {
+  forma <- names(duplicados)[i]
+  variantes <- unique(tabla$Forma[tolower(tabla$Forma) == forma])
+  cat(i, " '", forma, "' con las varientes: ", paste(variantes, collapse = ", "), "\n", sep = "")
+}
+```
+
+## Apartado 1.3
+```{r}
+# Función para detectar si la palabra contiene caracter no español
+tiene_no_espanoles <- function(texto) {
+  grepl("[^A-Za-zñÑáéíóúÁÉÍÓÚüÜ .,;:¡!¿?—-]", texto)
+}
+
+no_espanol <- tiene_no_espanoles(tabla$Forma)
+
+# Número de palabras con caracteres no españoles (según nuestro criterio)
+num_no_espanol <- sum(no_espanol)
+cat("El nº de formas no españolas según nuestro criterio es: ", num_no_espanol)
+
+#Ejemplos
+head(tabla$Forma[no_espanol],20)
+```
+
+
