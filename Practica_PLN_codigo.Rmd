@@ -1,14 +1,93 @@
 ---
 title: "Practica_PLN_Grupo08"
-output: html_document
+output:
+  pdf_document:
+    latex_engine: xelatex
+  html_document: default
 date: "`r Sys.Date()`"
 ---
+# Práctica 8
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+### CUIDADO AL EJECUTAR (Limpia el Global Enviroment)
+```{r}
+rm(list = ls())
 ```
 
+## Lectura del archivo 10000 palabras
+```{r, message=FALSE, warning=FALSE}
+
+## Lectura del html y transformación a dataframe
+
+# Leer el archivo
+lineas <- readLines("10000_formas_ortograficas.txt", 
+                   encoding = "UTF-8")
+lineas[0:4]
+# Buscar donde empieza la priemra linea
+linea_inicio <- grep("^[^0-9\t\n]+\t[0-9]+\t[0-9]+", lineas)[1]
+
+# Extraer 10000 líneas a partir del inicio
+datos <- lineas[linea_inicio:(linea_inicio + 9999)]
+
+# Separar cada línea por tabulador (\t)
+partes <- strsplit(datos, "\t")
+partes[0:4]
+# Extraer las columnas
+formas <- sapply(partes, function(x) x[1])
+frecuencias <- as.numeric(sapply(partes, function(x) x[2]))
+frec_norm <- as.numeric(sapply(partes, function(x) x[3]))
+
+# Crear el dataframe 
+tabla <- data.frame(Forma = formas,
+                    Frecuencia = frecuencias,
+                    Frec.norm = frec_norm,
+                    stringsAsFactors = FALSE)
+head(tabla)
+tail(tabla)
+```
+
+## Apartado 1.1
 ```{r}
+
+```
+
+## Apartado 1.2
+```{r}
+## Apartado 1.2
+
+# Pasar todo a minúsculas
+tabla$min_forma <- tolower(tabla$Forma)
+
+# Contar cuántas formas básicas tienen variantes
+conteo <- table(tolower(tabla$Forma))
+duplicados <- conteo[conteo > 1]
+
+cat("Formas básicas con duplicados no exactos:", length(duplicados), "\n")
+
+# Mostrar primeros 5 ejemplos
+cat("\nPrimeros 5 ejemplos:\n")
+for (i in 1:5) {
+  forma <- names(duplicados)[i]
+  variantes <- unique(tabla$Forma[tolower(tabla$Forma) == forma])
+  cat(i, " '", forma, "' con las varientes: ", paste(variantes, collapse = ", "), "\n", sep = "")
+}
+
+```
+
+## Apartado 1.3
+```{r, message=FALSE, warning=FALSE}
+# Función para detectar si la palabra contiene caracter no español
+tiene_no_espanoles <- function(texto) {
+  grepl("[^A-Za-zñÑáéíóúÁÉÍÓÚüÜ .,;:¡!¿?—-]", texto)
+}
+
+no_espanol <- tiene_no_espanoles(tabla$Forma)
+
+# Número de palabras con caracteres no españoles (según nuestro criterio)
+num_no_espanol <- sum(no_espanol)
+cat("El nº de formas no españolas según nuestro criterio es: ", num_no_espanol)
+
+#Ejemplos
+head(tabla$Forma[no_espanol],20)
 
 ```
 
