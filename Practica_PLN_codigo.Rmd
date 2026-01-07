@@ -68,30 +68,47 @@ abline(modelo, col = "red", lwd = 2)
 ### Apartado 1.1
 ```{r}
 ## Apartado 1.1
-# 1.1.1) BUSCAR FORMAS REPETIDAS
+## ¿Hay formas repetidas? (exactas)
+## Lista con: forma, línea del fichero (posición en tabla), frecuencia absoluta,
+## y para cada copia su línea y frecuencia.
 
-duplicadas <- tabla$Forma[duplicated(tabla$Forma)]
-duplicadas
+# 1) Detectar formas duplicadas exactas
+duplicadas1 <- tabla$Forma[duplicated(tabla$Forma)]
+duplicadas1 <- unique(duplicadas1)
 
+cat("Número de formas repetidas exactas:", length(duplicadas1), "\n")
 
-# 1.1.2) SI HAY DUPLICADAS, MOSTRAR DETALLES
+# 2) Construir lista detallada (forma + línea + frecuencia) para cada copia
+if (length(duplicadas1) > 0) {
 
-if (length(duplicadas) > 0) {
-  
-  lista_repetidas <- lapply(duplicadas, function(f) {
+  lista_repetidas1 <- lapply(duplicadas1, function(f) {
     indices <- which(tabla$Forma == f)
     data.frame(
       Forma = f,
       Linea = indices,
-      Frecuencia = tabla$Frecuencia[indices]
+      Frecuencia = tabla$Frecuencia[indices],
+      stringsAsFactors = FALSE
     )
   })
+
+  resultado1 <- do.call(rbind, lista_repetidas1)
+
+  cat("Número total de apariciones (filas) dentro de duplicados:", nrow(resultado1), "\n\n")
+
   
-  resultado <- do.call(rbind, lista_repetidas)
-  resultado
-  
+  if (nrow(resultado1) > 20) {
+    cat("Mostrando 5 primeras y 5 últimas filas de la lista de duplicados:\n\n")
+    print(head(resultado1, 5))
+    cat("\n...\n\n")
+    print(tail(resultado1, 5))
+  } else {
+    print(resultado1)
+  }
+
 } else {
-  print("No hay formas repetidas en este listado.")}
+  cat("No hay formas repetidas exactas en este listado.\n")
+}
+
 ```
 
 ### Apartado 1.2
@@ -171,6 +188,83 @@ tabla2 <- data.frame(Forma = formas2,
 head(tabla2)
 tail(tabla2)
 ```
+### Ley de Zipf 
+```{r}
+
+# =========================================================
+# EJERCICIO 8 - APARTADO 2.1
+# Ley de Zipf con la LISTA TOTAL DE FRECUENCIAS (tabla2)
+# =========================================================
+
+# Ordenamos por frecuencia absoluta (descendente)
+tabla2_ord <- tabla2[order(-tabla2$Frecuencia), ]
+
+# Creamos el rango
+tabla2_ord$rango <- 1:nrow(tabla2_ord)
+
+# Gráfico log-log
+plot(
+  log10(tabla2_ord$rango),
+  log10(tabla2_ord$Frecuencia),
+  pch = 20, cex = 0.5,
+  xlab = "log10(Rango)",
+  ylab = "log10(Frecuencia absoluta)",
+  main = "Ley de Zipf (Lista total): Frecuencia vs Rango (log-log)"
+)
+
+# Ajuste lineal para visualizar la recta
+modelo2 <- lm(log10(Frecuencia) ~ log10(rango), data = tabla2_ord)
+abline(modelo2, col = "red", lwd = 2)
+
+# (Opcional) mostrar coeficientes del ajuste en consola
+cat("\nAjuste Zipf (lista total, log-log):\n")
+print(summary(modelo2)$coefficients)
+
+
+```
+### Apartado 2.1
+```{r}
+
+# 1) Formas duplicadas exactas (mismas letras)
+duplicadas2 <- tabla2$Forma[duplicated(tabla2$Forma)]
+duplicadas2 <- unique(duplicadas2)
+
+cat("Número de formas repetidas exactas:", length(duplicadas2), "\n")
+
+# 2) Lista detallada: forma + línea(s) + frecuencia(s)
+if (length(duplicadas2) > 0) {
+
+  lista_repetidas2 <- lapply(duplicadas2, function(f) {
+    indices <- which(tabla2$Forma == f)
+    data.frame(
+      Forma = f,
+      Linea = indices,
+      Frecuencia = tabla2$Frecuencia[indices],
+      stringsAsFactors = FALSE
+    )
+  })
+
+  resultado2 <- do.call(rbind, lista_repetidas2)
+
+  # Mostrar cuántas filas (apariciones totales de duplicados)
+  cat("Número total de apariciones (filas) dentro de duplicados:", nrow(resultado2), "\n\n")
+
+  # Si es muy largo, mostramos 5 primeras y 5 últimas (como pide el enunciado)
+  if (nrow(resultado2) > 20) {
+    cat("Mostrando 5 primeras y 5 últimas filas de la lista de duplicados:\n\n")
+    print(head(resultado2, 5))
+    cat("\n...\n\n")
+    print(tail(resultado2, 5))
+  } else {
+    print(resultado2)
+  }
+
+} else {
+  cat("No hay formas repetidas exactas en este listado.\n")
+}
+
+```
+
 ### Apartado 2.3
 ```{r, message=FALSE, warning=FALSE}
 library(stringi)
