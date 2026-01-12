@@ -8,6 +8,22 @@ date: "`r Sys.Date()`"
 ---
 # Práctica 8
 
+GRUPO 8.
+
+Emails :
+
+Pablo Grano de oro Sevillano -> pablo.granodeoro@alumnos.upm.es
+
+Miguel Sanchez Lerin -> miguel.sanchez.lerin@alumnos.upm.es
+
+Carolina Simal Liñan ->  carolina.simal@alumnos.upm.es
+
+Alberto Gil Castro ->  alberto.gilcastro@alumnos.upm.es
+
+Gerardo Harguindey Rodriguez -> gerardo.harguindey@alumnos.upm.es
+
+Gonzalo García Macias -> gonzalo.garcia.macias@alumnos.upm.es
+
 ### CUIDADO AL EJECUTAR (Limpia el Global Enviroment)
 ```{r}
 rm(list = ls())
@@ -19,7 +35,7 @@ rm(list = ls())
 ```{r, message=FALSE, warning=FALSE}
 
 # Leer el archivo
-lineas <- readLines("10000_formas_ortograficas.txt", 
+lineas <- readLines("datos/10000_formas_ortograficas.txt", 
                    encoding = "UTF-8")
 lineas[0:4]
 # Buscar donde empieza la priemra linea
@@ -41,8 +57,8 @@ tabla <- data.frame(Forma = formas,
                     Frecuencia = frecuencias,
                     Frec.norm = frec_norm,
                     stringsAsFactors = FALSE)
-head(tabla)
-tail(tabla)
+head(tabla, 5)
+tail(tabla, 5)
 ```
 ## Ley de Zipf
 
@@ -63,16 +79,12 @@ plot(log10(tabla$rango),
 modelo <- lm(log10(Frecuencia) ~ log10(rango), data = tabla)
 abline(modelo, col = "red", lwd = 2)
 
+cat("\nAjuste Zipf (lista total, log-log):\n")
+print(summary(modelo)$coefficients)
 ```
 
 ### Apartado 1.1
 ```{r}
-## Apartado 1.1
-## ¿Hay formas repetidas? (exactas)
-## Lista con: forma, línea del fichero (posición en tabla), frecuencia absoluta,
-## y para cada copia su línea y frecuencia.
-
-# 1) Detectar formas duplicadas exactas
 duplicadas1 <- tabla$Forma[duplicated(tabla$Forma)]
 duplicadas1 <- unique(duplicadas1)
 
@@ -108,28 +120,52 @@ if (length(duplicadas1) > 0) {
 } else {
   cat("No hay formas repetidas exactas en este listado.\n")
 }
-
 ```
 
 ### Apartado 1.2
 ```{r}
+library(stringi)
 ## Apartado 1.2
 
 # Pasar todo a minúsculas
-tabla$min_forma <- tolower(tabla$Forma)
+tabla$forma_base <- stri_trans_general(tolower(tabla$Forma), "Latin-ASCII")
+
 
 # Contar cuántas formas básicas tienen variantes
-conteo <- table(tolower(tabla$Forma))
+conteo <- table(tabla$forma_base)
 duplicados <- conteo[conteo > 1]
 
 cat("Formas básicas con duplicados no exactos:", length(duplicados), "\n")
 
-# Mostrar primeros 5 ejemplos
-cat("\nPrimeros 5 ejemplos:\n")
-for (i in 1:5) {
-  forma <- names(duplicados)[i]
-  variantes <- unique(tabla$Forma[tolower(tabla$Forma) == forma])
-  cat(i, " '", forma, "' con las varientes: ", paste(variantes, collapse = ", "), "\n", sep = "")
+# Mostrar primeros y últimos 5 ejemplos
+n_dups <- length(duplicados)
+
+if (n_dups > 10) {
+  # Bloque de los 5 primeros
+  for (i in 1:5) {
+    base_actual <- names(duplicados)[i]
+    # Buscamos en la tabla original todas las formas que coinciden con esa base
+    variantes <- unique(tabla$Forma[tabla$forma_base == base_actual])
+    cat(i, " '", base_actual, "' tiene las variantes: ", paste(variantes, collapse = ", "), "\n", sep = "")
+  }
+  
+  # Separador visual conforme a la práctica
+  cat("...\n")
+  
+  # Bloque de los 5 últimos
+  for (i in (n_dups - 4):n_dups) {
+    base_actual <- names(duplicados)[i]
+    variantes <- unique(tabla$Forma[tabla$forma_base == base_actual])
+    cat(i, " '", base_actual, "' tiene las variantes: ", paste(variantes, collapse = ", "), "\n", sep = "")
+  }
+  
+} else {
+  # Si hay pocos resultados, se muestran todos
+  for (i in 1:n_dups) {
+    base_actual <- names(duplicados)[i]
+    variantes <- unique(tabla$Forma[tabla$forma_base == base_actual])
+    cat(i, " '", base_actual, "' tiene las variantes: ", paste(variantes, collapse = ", "), "\n", sep = "")
+  }
 }
 
 ```
@@ -142,39 +178,41 @@ formas_norm <- stri_trans_nfc(tabla$Forma) # normaliza acentos
 formas_norm <- gsub("\u00A0", " ", formas_norm) 
 formas_norm <- gsub("\t", " ", formas_norm)
 
-# Función para detectar si la palabra contiene caracter no español
-tiene_no_espanoles <- function(texto) {
-  grepl("[^A-Za-zñÑáéíóúÁÉÍÓÚüÜ .,;:¡!¿?—–-]", texto)
-}
+patron <- "^[A-Za-zñÑáéíóúÁÉÍÓÚüÜ0-9[:space:][:punct:]]+$"
 
-no_espanol <- tiene_no_espanoles(formas_norm)
+# Marcamos como no español todo lo que NO encaje exactamente con ese patrón de letras
+no_espanol <- !stri_detect_regex(formas_norm, patron)
 
-# Número de palabras con caracteres no españoles (según nuestro criterio)
+# Conteo de resultados
 num_no_espanol <- sum(no_espanol)
-cat("El nº de formas no españolas según nuestro criterio es: ", num_no_espanol)
+cat("Con la criba estricta, se han detectado", num_no_espanol, "formas no españolas.")
 
-#Ejemplos
-head(tabla$Forma[no_espanol],20)
+# Verificación de lo que HEMOS QUITADO 
+cat("\nEjemplos de formas EXCLUIDAS (No españolas):\n")
+print(head(tabla$Forma[no_espanol], 5))
+print(tail(tabla$Forma[no_espanol], 5))
+
+#  Verificación de lo que SE QUEDA 
+cat("\nEjemplos de formas PERMITIDAS (Españolas):\n")
+print(head(tabla$Forma[!no_espanol], 5))
+print(tail(tabla$Forma[!no_espanol], 5))
 
 ```
 
 ## 2º Parte
-### Lectura del archivo 10000 palabras
+### Lectura del archivo 1M palabras
 ```{r, warning=FALSE}
 # Leer el archivo
-lineas2 <- readLines("frecuencia_formas_ortograficas_1_3.txt", 
+lineas2 <- readLines("datos/frecuencia_formas_ortograficas_1_3.txt", 
                    encoding = "UTF-8")
-lineas2[0:4]
 # Buscar donde empieza la priemra linea
 linea_inicio2 <- grep("^[^0-9\t\n]+\t[0-9]+\t[0-9]+", lineas2)[1]
-
 
 # Extraer todas las líneas a partir del inicio
 datos2 <- lineas2[linea_inicio2:(linea_inicio2 + length(lineas2)-2)] #El -2 pq sinó aparecen 2 lineas vacias
 
 # Separar cada línea por tabulador (\t)
 partes2 <- strsplit(datos2, "\t")
-partes2[0:4]
 # Extraer las columnas
 formas2 <- sapply(partes2, function(x) x[1])
 frecuencias2 <- as.numeric(sapply(partes2, function(x) x[2]))
@@ -185,24 +223,16 @@ tabla2 <- data.frame(Forma = formas2,
                     Frecuencia = frecuencias2,
                     Frec.norm = frec_norm2,
                     stringsAsFactors = FALSE)
-head(tabla2)
-tail(tabla2)
+head(tabla2, 5)
+tail(tabla2, 5)
 ```
-### Ley de Zipf 
-```{r}
+## Ley de Zipf 2
 
-# =========================================================
-# EJERCICIO 8 - APARTADO 2.1
-# Ley de Zipf con la LISTA TOTAL DE FRECUENCIAS (tabla2)
-# =========================================================
-
-# Ordenamos por frecuencia absoluta (descendente)
+```{r,dev='png', dpi=600, cache=TRUE}
 tabla2_ord <- tabla2[order(-tabla2$Frecuencia), ]
-
-# Creamos el rango
 tabla2_ord$rango <- 1:nrow(tabla2_ord)
 
-# Gráfico log-log
+# Gráfico
 plot(
   log10(tabla2_ord$rango),
   log10(tabla2_ord$Frecuencia),
@@ -216,14 +246,14 @@ plot(
 modelo2 <- lm(log10(Frecuencia) ~ log10(rango), data = tabla2_ord)
 abline(modelo2, col = "red", lwd = 2)
 
-# (Opcional) mostrar coeficientes del ajuste en consola
+# mostrar coeficientes del ajuste en consola
 cat("\nAjuste Zipf (lista total, log-log):\n")
 print(summary(modelo2)$coefficients)
-
-
 ```
+
 ### Apartado 2.1
 ```{r}
+## Apartado 2.1
 
 # 1) Formas duplicadas exactas (mismas letras)
 duplicadas2 <- tabla2$Forma[duplicated(tabla2$Forma)]
@@ -262,6 +292,52 @@ if (length(duplicadas2) > 0) {
 } else {
   cat("No hay formas repetidas exactas en este listado.\n")
 }
+```
+
+### Apartado 2.2
+```{r}
+library(stringi)
+## Apartado 2.2
+
+# Pasar todo a minúsculas
+tabla2$forma_base <- stri_trans_general(tolower(tabla2$Forma), "Latin-ASCII")
+# Contar cuántas formas básicas tienen variantes
+conteo <- table(tabla2$forma_base)
+duplicados <- conteo[conteo > 1]
+
+cat("Formas básicas con duplicados no exactos:", length(duplicados), "\n")
+
+# Mostrar primeros y últimos 5 ejemplos
+n_dups <- length(duplicados)
+cat("\nMostrando formas con variantes (5 primeras y 5 últimas):\n")
+
+if (n_dups > 10) {
+  # Bloque de los 5 primeros
+  for (i in 1:5) {
+    base_actual <- names(duplicados)[i]
+    # Buscamos en la tabla original todas las formas que coinciden con esa base
+    variantes <- unique(tabla2$Forma[tabla2$forma_base == base_actual])
+    cat(i, " '", base_actual, "' tiene las variantes: ", paste(variantes, collapse = ", "), "\n", sep = "")
+  }
+  
+  # Separador visual
+  cat("...\n")
+  
+  # Bloque de los 5 últimos
+  for (i in (n_dups - 4):n_dups) {
+    base_actual <- names(duplicados)[i]
+    variantes <- unique(tabla2$Forma[tabla2$forma_base == base_actual])
+    cat(i, " '", base_actual, "' tiene las variantes: ", paste(variantes, collapse = ", "), "\n", sep = "")
+  }
+  
+} else {
+  # Si hay pocos resultados, se muestran todos
+  for (i in 1:n_dups) {
+    base_actual <- names(duplicados)[i]
+    variantes <- unique(tabla2$Forma[tabla2$forma_base == base_actual])
+    cat(i, " '", base_actual, "' tiene las variantes: ", paste(variantes, collapse = ", "), "\n", sep = "")
+  }
+}
 
 ```
 
@@ -274,21 +350,102 @@ formas_norm2 <- stri_trans_nfc(tabla2$Forma) # normaliza acentos
 formas_norm2 <- gsub("\u00A0", " ", formas_norm2) 
 formas_norm2 <- gsub("\t", " ", formas_norm2)
 
-# Función para detectar si la palabra contiene caracter no español
-tiene_no_espanoles <- function(texto) {
-  grepl("[^A-Za-zñÑáéíóúÁÉÍÓÚüÜ .,;:¡!¿?—–-]", texto)
-}
 
-no_espanol2 <- tiene_no_espanoles(formas_norm2)
+patron <- "^[A-Za-zñÑáéíóúÁÉÍÓÚüÜ0-9[:space:][:punct:]]+$"
 
-# Número de palabras con caracteres no españoles (según nuestro criterio)
+# Marcamos como no español todo lo que NO encaje exactamente con ese patrón de letras
+no_espanol2 <- !stri_detect_regex(formas_norm2, patron)
+
+# Conteo de resultados
 num_no_espanol2 <- sum(no_espanol2)
-cat("El nº de formas no españolas según nuestro criterio es: ", num_no_espanol2)
+cat("Con la criba estricta, se han detectado", num_no_espanol2, "formas no españolas.")
 
-#Ejemplos
-head(tabla2$Forma[no_espanol2],20)
-tail(tabla2$Forma[no_espanol2],20)
-#tabla2$Forma[no_espanol2]
+# Verificación de lo que HEMOS QUITADO 
+cat("\nEjemplos de formas EXCLUIDAS (No españolas):\n")
+print(head(tabla2$Forma[no_espanol2], 5))
+print(tail(tabla2$Forma[no_espanol2], 5))
+
+#  Verificación de lo que SE QUEDA 
+cat("\nEjemplos de formas PERMITIDAS (Españolas):\n")
+print(head(tabla2$Forma[!no_espanol2], 5))
+print(tail(tabla2$Forma[!no_espanol2], 5))
 
 ```
+### Explicación partes más relevantes
+
+Lo primero que conviene destacar es el salto de escala: no es lo mismo procesar un corpus de 10.000 palabras que uno de 1.000.000. Ese crecimiento implica que cualquier operación innecesaria (recorridos repetidos, transformaciones redundantes, etc.) se vuelve muy costosa. Por eso, el enfoque general del trabajo ha sido mantener scripts lo más eficientes posible, con complejidades simples y evitando pasos prescindibles, especialmente teniendo en cuenta que no disponemos de equipos especialmente potentes.
+
+El primer reto importante fue la lectura de los archivos. Inicialmente descargamos el contenido en formato HTML, pero extraer el texto útil de forma limpia resultaba bastante tedioso. Finalmente encontramos una forma de descargar el contenido directamente en .txt, lo que simplificó mucho el proceso.
+
+Decidimos leer los ficheros en UTF-8 para conservar correctamente caracteres como la “ñ” y las tildes. A partir de ahí, detectamos el inicio del texto relevante mediante una expresión regular (aprovechando que esa cabecera era distinta del resto) y nos quedamos con el contenido a partir de ese punto. Para el análisis posterior, construimos una tabla de frecuencias con la forma y su frecuencia de aparición.
+
+La implementación de la Ley de Zipf no fue especialmente compleja a nivel lógico. Sin embargo, el principal problema apareció en la segunda pregunta, al intentar exportar los resultados a PDF: al manejar tantos datos, la figura no terminaba de renderizarse y el documento no se generaba.
+
+La solución fue configurar el chunk de RMarkdown con:
+
+{r, dev='png', dpi=600, cache=TRUE}
+
+Esta configuración es mucho más eficiente que dejar los valores por defecto, porque fuerza el renderizado del gráfico como imagen raster (mapa de bits) en alta resolución, en lugar de gráfico vectorial. Así evitamos que el PDF intente representar cada punto como un objeto independiente (lo que lo vuelve pesado o incluso bloquea el proceso). Además, el caché evita recalcular lo mismo varias veces, reduciendo tiempos de compilación.
+
+Apartados 1.1 y 2.1 (duplicados exactos)
+
+En estos apartados no hubo especial dificultad: se detectaron las formas exactamente iguales y, mediante una condición, en caso de existir repeticiones se generó una lista con:
+
+  la forma repetida,
+
+  la(s) línea(s) en las que aparece,
+
+  y su frecuencia.
+
+Apartados 1.2 y 2.2 (duplicados no exactos)
+
+Como aquí se pedían duplicados no exactos, el paso clave fue realizar una normalización previa: convertir a minúsculas y eliminar marcas diacríticas (tildes) y otros signos, incluyendo la sustitución de ñ → n, usando "Latin-ASCII" para asegurarnos de no dejar casos sin cubrir.
+
+Somos conscientes de que esta normalización es relativamente agresiva, pero en la práctica ofrece resultados consistentes y permite detectar un gran número de duplicados que, de otro modo, quedarían separados por pequeñas diferencias ortográficas.
+
+Apartados 1.3 y 2.3 (caracteres no españoles)
+
+En este último bloque el objetivo era identificar formas con caracteres no propios del alfabeto español. La principal complicación fue que no todos los acentos (y ciertos espacios/tabuladores) estaban codificados de forma uniforme. Por ello, primero realizamos una normalización adicional para unificar:
+
+  variantes de acentuación,
+
+  tabuladores,
+
+  y ciertos tipos de espacios “raros” que daban problemas.
+
+Después definimos un patrón mediante expresiones regulares que selecciona cualquier carácter fuera del conjunto que consideramos válido en español. Finalmente, se listaron todas las formas que contenían al menos un carácter no contemplado, identificándolas como candidatas a “no españolas”.
+
+_____________________________________________________________________
+
+
+
+
+
+Lista de tareas y autores:
+
+Trabajo gestado y organizado por: Pablo Grano de oro Sevillano
+
+Pregunta 1:
+
+Lectura archivos 10K palabras -> Carolina Simal Liñan 
+
+Ley Zipf 1 -> Gerardo Harguindey Rodriguez
+
+1.1 -> Gerardo Harguindey Rodriguez
+
+1.2 -> Carolina Simal Liñan 
+
+1.3 -> Pablo Grano de oro Sevillano
+
+Pregunta 2:
+
+Lectura archivos 1M palabras -> Pablo Grano de oro Sevillano
+
+Ley Zipf 2 -> Alberto Gil Castro
+
+2.1 -> Alberto Gil Castro
+
+2.2 -> Gonzalo García Macias
+
+2.3 -> Miguel Sanchez Lerin
 
