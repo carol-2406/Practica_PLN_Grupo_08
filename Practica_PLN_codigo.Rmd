@@ -362,13 +362,13 @@ cat("Con la criba estricta, se han detectado", num_no_espanol2, "formas no espa�
 
 # Verificación de lo que HEMOS QUITADO 
 cat("\nEjemplos de formas EXCLUIDAS (No españolas):\n")
-print(head(tabla2$Forma[no_espanol2], 5))
-print(tail(tabla2$Forma[no_espanol2], 5))
+head(tabla2$Forma[no_espanol2], 5)
+tail(tabla2$Forma[no_espanol2], 5)
 
 #  Verificación de lo que SE QUEDA 
 cat("\nEjemplos de formas PERMITIDAS (Españolas):\n")
-print(head(tabla2$Forma[!no_espanol2], 5))
-print(tail(tabla2$Forma[!no_espanol2], 5))
+head(tabla2$Forma[!no_espanol2], 5)
+tail(tabla2$Forma[!no_espanol2], 5)
 
 ```
 ### Explicación partes más relevantes
