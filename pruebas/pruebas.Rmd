@@ -1,0 +1,108 @@
+---
+title: "Pruebas"
+author: "Pablo Grano de oro Sevillano"
+date: "2026-01-14"
+output:
+  pdf_document: default
+  html_document: default
+---
+---
+title: "Pruebas de Integración - Grupo 08"
+output: html_document
+---
+
+Primero vamos ha ejecutar algunas pruebas sencillas, con un conjunto de datos sencillos
+```{r}
+library(stringi)
+
+tabla_test <- data.frame(
+  Forma = c("casa", "casa", "Casa", "cañón", "canon", "niño", "π-greco", "email@test.com", "Hóla"),
+  Frecuencia = c(100, 100, 50, 30, 20, 40, 5, 2, 10),
+  Frec.norm = c(0.1, 0.1, 0.05, 0.03, 0.02, 0.04, 0.005, 0.002, 0.01),
+  stringsAsFactors = FALSE
+)
+
+tabla <- tabla_test
+
+
+duplicadas1 <- tabla$Forma[duplicated(tabla$Forma)]
+duplicadas1 <- unique(duplicadas1)
+
+cat("RESULTADO TEST 1.1:\n")
+cat("Formas repetidas detectadas:", paste(duplicadas1, collapse = ", "), "\n")
+
+tabla$forma_base <- stri_trans_general(tolower(tabla$Forma), "Latin-ASCII")
+conteo <- table(tabla$forma_base)
+duplicados_base <- conteo[conteo > 1]
+
+cat("RESULTADO TEST 1.2:\n")
+print(duplicados_base)
+
+formas_norm <- stri_trans_nfc(tabla$Forma)
+formas_norm <- gsub("\u00A0", " ", formas_norm) 
+formas_norm <- gsub("\t", " ", formas_norm)
+
+patron <- "^[A-Za-zñÑáéíóúÁÉÍÓÚüÜ0-9[:space:][:punct:]]+$"
+no_espanol <- !stri_detect_regex(formas_norm, patron)
+
+cat("RESULTADO TEST 1.3:\n")
+cat("Formas detectadas como NO españolas:\n")
+print(tabla$Forma[no_espanol])
+
+
+tabla$rango <- 1:nrow(tabla)
+modelo_test <- lm(log10(Frecuencia) ~ log10(rango), data = tabla)
+
+cat("Coeficientes del modelo de prueba:\n")
+print(summary(modelo_test)$coefficients)
+```
+
+Ahora vamos a hacer algo un poco más complejo (un conjunto de datos más complejo), pero tampoco nos subimos a la parra
+```{r}
+tabla_trampa <- data.frame(
+  Forma = c(
+    "casa",        
+    "  casa",      
+    "casa  ",      
+    "niño",       
+    "ni\u006e\u0303o",
+    "pingüino",   
+    "Çat",         
+    "mañana",      
+    "manana",     
+    "HOLA",        
+    "hola\t",      
+    "R2-D2",       
+    "¡¡¡GOL!!!",   
+    "😊"          
+  ),
+  Frecuencia = sample(1:100, 14),
+  stringsAsFactors = FALSE
+)
+
+tabla <- tabla_trampa
+tabla$Forma <- trimws(tabla$Forma)
+
+
+tabla$forma_base <- stri_trans_general(tolower(tabla$Forma), "Latin-ASCII")
+conteo <- table(tabla$forma_base)
+duplicados <- conteo[conteo > 1]
+
+cat("--- RESULTADOS DE DUPLICADOS ---\n")
+print(duplicados)
+
+
+formas_norm <- stri_trans_nfc(tabla$Forma)
+formas_norm <- gsub("\u00A0", " ", formas_norm) 
+formas_norm <- gsub("\t", " ", formas_norm)
+
+patron <- "^[A-Za-zñÑáéíóúÁÉÍÓÚüÜ0-9[:space:][:punct:]]+$"
+no_espanol <- !stri_detect_regex(formas_norm, patron)
+
+cat("--- FORMAS DETECTADAS COMO 'NO ESPAÑOLAS' ---\n")
+print(tabla$Forma[no_espanol])
+```
+
+
+
+

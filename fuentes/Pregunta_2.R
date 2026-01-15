@@ -17,6 +17,7 @@ tabla2 <- data.frame(Forma = formas2,
                      Frecuencia = frecuencias2,
                      Frec.norm = frec_norm2,
                      stringsAsFactors = FALSE)
+tabla$Forma <- trimws(tabla$Forma)
 
 head(tabla2, 5)
 tail(tabla2, 5)
